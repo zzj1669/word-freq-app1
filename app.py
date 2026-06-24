@@ -19,7 +19,8 @@ def render_wordcloud(data: list, title: str = "词云图"):
     wc = WordCloud()
     wc.add("", data, word_size_range=[12, 60], shape="circle")
     wc.set_global_opts(title_opts=opts.TitleOpts(title=title))
-    return wc
+    # 返回渲染配置，不再返回图表实例
+    return wc.render_options()
 
 
 def render_bar(data: list, title: str = "柱状图"):
@@ -42,7 +43,7 @@ def render_bar(data: list, title: str = "柱状图"):
         yaxis_opts=opts.AxisOpts(name="词频"),
         tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="shadow")
     )
-    return bar
+    return bar.render_options()
 
 
 def render_line(data: list, title: str = "折线图"):
@@ -65,7 +66,7 @@ def render_line(data: list, title: str = "折线图"):
         yaxis_opts=opts.AxisOpts(name="词频"),
         tooltip_opts=opts.TooltipOpts(trigger="axis")
     )
-    return line
+    return line.render_options()
 
 
 def render_pie(data: list, title: str = "饼图"):
@@ -87,19 +88,20 @@ def render_pie(data: list, title: str = "饼图"):
             textstyle_opts=opts.TextStyleOpts(font_size=12)
         )
     )
-    return pie
+    return pie.render_options()
 
 
 def render_radar(data: list, title: str = "雷达图"):
     """生成雷达图（仅取前6个词）"""
     top6 = data[:6]
+    # 兜底空数据
+    if not top6:
+        return {}
     max_freq = max([item[1] for item in top6]) if top6 else 1
-    # 避免所有值相同时 max_freq=0 导致图表空白
     if max_freq <= 0:
         max_freq = 1
 
     radar = Radar()
-    # pyecharts 2.x 的 RadarIndicatorItem 参数是 max_ 而非 max
     schema = [opts.RadarIndicatorItem(name=item[0], max_=max_freq) for item in top6]
     radar.add_schema(schema)
     radar.add("词频", [[item[1] for item in top6]],
@@ -109,7 +111,7 @@ def render_radar(data: list, title: str = "雷达图"):
         title_opts=opts.TitleOpts(title=title, pos_left="center"),
         legend_opts=opts.LegendOpts(pos_top="8%")
     )
-    return radar
+    return radar.render_options()
 
 
 def render_scatter(data: list, title: str = "散点图"):
@@ -122,7 +124,7 @@ def render_scatter(data: list, title: str = "散点图"):
         xaxis_opts=opts.AxisOpts(name="词序"),
         yaxis_opts=opts.AxisOpts(name="词频")
     )
-    return scatter
+    return scatter.render_options()
 
 
 def render_funnel(data: list, title: str = "漏斗图"):
@@ -145,7 +147,7 @@ def render_funnel(data: list, title: str = "漏斗图"):
             textstyle_opts=opts.TextStyleOpts(font_size=10)
         )
     )
-    return funnel
+    return funnel.render_options()
 
 
 # 图表路由字典（dispatch table）
@@ -253,18 +255,19 @@ def main():
             # Step 4: 图表可视化
             st.subheader(f"{chart_type}展示")
             
-            # 使用字典派发渲染图表
             chart_func = CHART_DISPATCH.get(chart_type)
             if chart_func:
                 try:
-                    chart = chart_func(top_words, title=f"{chart_type} - {result['title']}")
-                    st_echarts(chart, height=500)
+                    # 1. 提前拿到渲染配置字典
+                    chart_options = chart_func(top_words, title=f"{chart_type} - {result['title']}")
+                    # 2. 强制校验配置不为空，防止前端null报错
+                    if not chart_options:
+                        st.warning("当前无可用图表数据")
+                    else:
+                        # 标准传参：options= 显式指定，高度统一500
+                        st_echarts(options=chart_options, height="500px")
                 except Exception as e:
                     st.error(f"图表渲染失败: {str(e)}")
-            
-            # 显示原文片段
-            with st.expander("查看原文片段"):
-                st.text_area("提取的文本", text[:2000], height=200)
 
 
 if __name__ == "__main__":
