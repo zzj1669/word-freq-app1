@@ -4,7 +4,7 @@
 """
 
 import streamlit as st
-from streamlit_echarts import st_pyecharts
+from streamlit_echarts import st_echarts
 from pyecharts.charts import WordCloud, Bar, Line, Pie, Radar, Scatter, Funnel
 from pyecharts import options as opts
 import pandas as pd
