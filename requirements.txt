@@ -1,0 +1,8 @@
+streamlit==1.35.0
+pillow==10.1.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+jieba==0.42.1
+pyecharts==2.0.4
+streamlit-echarts==0.5.0
+pandas==2.2.2
