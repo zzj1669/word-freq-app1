@@ -15,16 +15,15 @@ from tokenize_words import get_word_freq, get_text_stats, load_stopwords
 
 
 def render_wordcloud(data: list, title: str = "词云图"):
-    """生成词云图"""
+    """生成词云图，返回图表实例"""
     wc = WordCloud()
     wc.add("", data, word_size_range=[12, 60], shape="circle")
     wc.set_global_opts(title_opts=opts.TitleOpts(title=title))
-    # 返回渲染配置，不再返回图表实例
-    return wc.render_options()
+    return wc
 
 
 def render_bar(data: list, title: str = "柱状图"):
-    """生成柱状图"""
+    """生成柱状图，返回图表实例"""
     bar = Bar()
     bar.add_xaxis([item[0] for item in data])
     bar.add_yaxis("词频", [item[1] for item in data])
@@ -43,11 +42,11 @@ def render_bar(data: list, title: str = "柱状图"):
         yaxis_opts=opts.AxisOpts(name="词频"),
         tooltip_opts=opts.TooltipOpts(trigger="axis", axis_pointer_type="shadow")
     )
-    return bar.render_options()
+    return bar
 
 
 def render_line(data: list, title: str = "折线图"):
-    """生成折线图"""
+    """生成折线图，返回图表实例"""
     line = Line()
     line.add_xaxis([item[0] for item in data])
     line.add_yaxis("词频", [item[1] for item in data], is_smooth=True)
@@ -66,11 +65,11 @@ def render_line(data: list, title: str = "折线图"):
         yaxis_opts=opts.AxisOpts(name="词频"),
         tooltip_opts=opts.TooltipOpts(trigger="axis")
     )
-    return line.render_options()
+    return line
 
 
 def render_pie(data: list, title: str = "饼图"):
-    """生成饼图"""
+    """生成饼图，返回图表实例"""
     pie = Pie()
     pie.add(
         "词频占比",
@@ -88,15 +87,12 @@ def render_pie(data: list, title: str = "饼图"):
             textstyle_opts=opts.TextStyleOpts(font_size=12)
         )
     )
-    return pie.render_options()
+    return pie
 
 
 def render_radar(data: list, title: str = "雷达图"):
-    """生成雷达图（仅取前6个词）"""
+    """生成雷达图（仅取前6个词），返回图表实例"""
     top6 = data[:6]
-    # 兜底空数据
-    if not top6:
-        return {}
     max_freq = max([item[1] for item in top6]) if top6 else 1
     if max_freq <= 0:
         max_freq = 1
@@ -111,11 +107,11 @@ def render_radar(data: list, title: str = "雷达图"):
         title_opts=opts.TitleOpts(title=title, pos_left="center"),
         legend_opts=opts.LegendOpts(pos_top="8%")
     )
-    return radar.render_options()
+    return radar
 
 
 def render_scatter(data: list, title: str = "散点图"):
-    """生成散点图"""
+    """生成散点图，返回图表实例"""
     scatter = Scatter()
     scatter.add_xaxis(range(1, len(data) + 1))
     scatter.add_yaxis("词频", [item[1] for item in data])
@@ -124,11 +120,11 @@ def render_scatter(data: list, title: str = "散点图"):
         xaxis_opts=opts.AxisOpts(name="词序"),
         yaxis_opts=opts.AxisOpts(name="词频")
     )
-    return scatter.render_options()
+    return scatter
 
 
 def render_funnel(data: list, title: str = "漏斗图"):
-    """生成漏斗图"""
+    """生成漏斗图，返回图表实例"""
     funnel = Funnel()
     funnel.add(
         "词频",
@@ -147,10 +143,10 @@ def render_funnel(data: list, title: str = "漏斗图"):
             textstyle_opts=opts.TextStyleOpts(font_size=10)
         )
     )
-    return funnel.render_options()
+    return funnel
 
 
-# 图表路由字典（dispatch table）
+# 图表路由字典：存【生成图表的函数】，不是字典
 CHART_DISPATCH = {
     "词云": render_wordcloud,
     "柱状图": render_bar,
@@ -258,14 +254,12 @@ def main():
             chart_func = CHART_DISPATCH.get(chart_type)
             if chart_func:
                 try:
-                    # 1. 提前拿到渲染配置字典
-                    chart_options = chart_func(top_words, title=f"{chart_type} - {result['title']}")
-                    # 2. 强制校验配置不为空，防止前端null报错
-                    if not chart_options:
-                        st.warning("当前无可用图表数据")
-                    else:
-                        # 标准传参：options= 显式指定，高度统一500
-                        st_echarts(options=chart_options, height="500px")
+                    # 1. 调用函数，拿到pyecharts图表实例
+                    chart_obj = chart_func(top_words, title=f"{chart_type} - {result['title']}")
+                    # 2. 从实例提取配置字典
+                    chart_options = chart_obj.render_options()
+                    # 3. 标准传参渲染
+                    st_echarts(options=chart_options, height="500px")
                 except Exception as e:
                     st.error(f"图表渲染失败: {str(e)}")
 
